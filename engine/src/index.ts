@@ -2,7 +2,7 @@ import "dotenv/config";
 import { createClient } from "redis";
 import { env } from "./utils/env.js";
 import type { CreateOrderInput, CancelOrder } from "./store/exchange-store.js";
-import { createOrder, getDepth, getUserBalance } from "./orderbook.js";
+import { createOrder, getDepth, getUserBalance, getOrder } from "./orderbook.js";
 
 export type EngineCommandType =
   | "create_order"
@@ -98,6 +98,9 @@ function handleEngineRequest(message: EngineRequest): unknown {
     case "get_order":
     // read orderId from payload
     // find and return the order
+
+    const { orderId } = message.payload as { orderId: string }
+    return getOrder(orderId)
 
     case "cancel_order":
     // read orderId from payload

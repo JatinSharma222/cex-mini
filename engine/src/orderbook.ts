@@ -9,6 +9,7 @@ import {
   type DepthResponse,
   ORDERBOOKS,
   BALANCES,
+  ORDERS,
 } from "./store/exchange-store";
 
 export function createOrder(input: CreateOrderInput) {
@@ -177,4 +178,10 @@ export function getDepth(symbol: string): DepthResponse {
 
 export function getUserBalance(userId: string): Record<string, Balance> {
   return BALANCES[userId] || {};
+}
+
+export function getOrder(orderId: string) {
+  const order = ORDERS.get(orderId)
+  if (!order) throw new Error("Order not found");
+  return order;
 }
