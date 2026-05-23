@@ -2,7 +2,7 @@ import "dotenv/config";
 import { createClient } from "redis";
 import { env } from "./utils/env.js";
 import type { CreateOrderInput, CancelOrder } from "./store/exchange-store.js";
-import { createOrder, getDepth, getUserBalance, getOrder } from "./orderbook.js";
+import { createOrder, getDepth, getUserBalance, getOrder, cancelOrder } from "./orderbook.js";
 
 export type EngineCommandType =
   | "create_order"
@@ -105,30 +105,11 @@ function handleEngineRequest(message: EngineRequest): unknown {
     case "cancel_order":
     // read orderId from payload
     // remove from order book, return confirmation
+
+    const payload = message.payload as unknown as CancelOrder
+    return cancelOrder(payload)
+
   }
-
-  // just checking the flow, remove this when you start implementing the logic
-  //   if (message.type === "create_order") {
-  //     return {
-  //       orderId: crypto.randomUUID(),
-  //       status: "filled",
-  //       filledQty: DUMMY_SELL_ORDER.qty,
-  //       averagePrice: DUMMY_SELL_ORDER.price,
-  //       fills: [
-  //         {
-  //           fillId: crypto.randomUUID(),
-  //           symbol: DUMMY_SELL_ORDER.symbol,
-  //           price: DUMMY_SELL_ORDER.price,
-  //           qty: DUMMY_SELL_ORDER.qty,
-  //           buyOrderId: "request-buy-order",
-  //           sellOrderId: DUMMY_SELL_ORDER.orderId,
-  //         },
-  //       ],
-  //       note: "Smoke-test response only. Students must replace this with real matching logic.",
-  //     };
-  //   }
-
-  //   throw new Error("TODO(student): implement this engine request type");
 }
 
 console.log(`Engine listening on Redis queue: ${env.incomingQueue}`);

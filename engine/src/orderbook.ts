@@ -185,3 +185,23 @@ export function getOrder(orderId: string) {
   if (!order) throw new Error("Order not found");
   return order;
 }
+
+export function cancelOrder(input: CancelOrder) {
+  const { orderId, userId } = input
+  const order = ORDERS.get(orderId)
+
+  if (!order) throw new Error("Order not found");
+  const orderbook = ORDERBOOKS[order.symbol]
+
+  if (order.userId !== userId) throw new Error("Unauthorized");
+  if (order.status === "filled") throw new Error("Order already filled");
+  if (!orderbook) throw new Error("orderbook not found")
+
+  const side = order.side === "buy" ? orderbook.bids : orderbook.asks
+  const index = side.findIndex(o => o.orderId === orderId);
+
+  if (index !== -1) side.splice(index, 1)
+  order.status = "cancelled"
+
+  return { message: "Order cancelled!" };
+}
