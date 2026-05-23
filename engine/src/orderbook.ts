@@ -12,6 +12,36 @@ import {
   ORDERS,
 } from "./store/exchange-store";
 
+function getBalance(userId: string, symbol: string) {
+  if (!BALANCES[userId]) BALANCES[userId] = {};
+  if (!BALANCES[userId][symbol]) {
+    BALANCES[userId][symbol] = { available: 0, locked: 0 };
+  }
+  return BALANCES[userId][symbol];
+}
+
+function getOrderbook(symbol: string) {
+  if (!ORDERBOOKS[symbol]) {
+    ORDERBOOKS[symbol] = { bids: [], asks: [] };
+  }
+  return ORDERBOOKS[symbol];
+}
+
+function settleTrade(
+  buyerId: string,
+  sellerId: string,
+  qty: number,
+  price: number,
+  symbol: string,
+): void {
+  const totalCost = qty * price;
+  getBalance(buyerId, "INR").locked -= totalCost;
+  getBalance(sellerId, "INR").available += totalCost;
+
+  getBalance(sellerId, symbol).locked -= qty;
+  getBalance(buyerId, symbol).available += qty;
+}
+
 export function createOrder(input: CreateOrderInput) {
   const { userId, price, qty, side, type, symbol } = input;
   const totalCost = (price || 0) * qty;
@@ -45,7 +75,7 @@ export function createOrder(input: CreateOrderInput) {
     status: "open",
   };
 
-  const books = getOrderBook(symbol);
+  const books = getOrderbook(symbol);
   const oppositeSide = side === "buy" ? books.asks : books.bids;
 
   let remainingQty = qty;
@@ -146,7 +176,7 @@ export function createOrder(input: CreateOrderInput) {
 }
 
 export function getDepth(symbol: string): DepthResponse {
-  const book = ORDERBOOKS[symbol];
+  const book = getOrderbook(symbol);
   if (!book) {
     return {
       symbol: symbol,
@@ -181,27 +211,27 @@ export function getUserBalance(userId: string): Record<string, Balance> {
 }
 
 export function getOrder(orderId: string) {
-  const order = ORDERS.get(orderId)
+  const order = ORDERS.get(orderId);
   if (!order) throw new Error("Order not found");
   return order;
 }
 
 export function cancelOrder(input: CancelOrder) {
-  const { orderId, userId } = input
-  const order = ORDERS.get(orderId)
+  const { orderId, userId } = input;
+  const order = ORDERS.get(orderId);
 
   if (!order) throw new Error("Order not found");
-  const orderbook = ORDERBOOKS[order.symbol]
+  const orderbook = ORDERBOOKS[order.symbol];
 
   if (order.userId !== userId) throw new Error("Unauthorized");
   if (order.status === "filled") throw new Error("Order already filled");
-  if (!orderbook) throw new Error("orderbook not found")
+  if (!orderbook) throw new Error("orderbook not found");
 
-  const side = order.side === "buy" ? orderbook.bids : orderbook.asks
-  const index = side.findIndex(o => o.orderId === orderId);
+  const side = order.side === "buy" ? orderbook.bids : orderbook.asks;
+  const index = side.findIndex((o) => o.orderId === orderId);
 
-  if (index !== -1) side.splice(index, 1)
-  order.status = "cancelled"
+  if (index !== -1) side.splice(index, 1);
+  order.status = "cancelled";
 
   return { message: "Order cancelled!" };
 }

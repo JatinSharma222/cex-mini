@@ -2,7 +2,13 @@ import "dotenv/config";
 import { createClient } from "redis";
 import { env } from "./utils/env.js";
 import type { CreateOrderInput, CancelOrder } from "./store/exchange-store.js";
-import { createOrder, getDepth, getUserBalance, getOrder, cancelOrder } from "./orderbook.js";
+import {
+  createOrder,
+  getDepth,
+  getUserBalance,
+  getOrder,
+  cancelOrder,
+} from "./orderbook.js";
 
 export type EngineCommandType =
   | "create_order"
@@ -62,21 +68,6 @@ async function sendResponse(
 }
 
 function handleEngineRequest(message: EngineRequest): unknown {
-  /**
-   * TODO(student):
-   * 1. Check _message.type.
-   * 2. Read _message.payload.
-   * 3. Call your order book / balance / order logic.
-   * 4. Return the data that should go back to the backend.
-   *
-   * Required message types:
-   * - create_order
-   * - get_depth
-   * - get_user_balance
-   * - get_order
-   * - cancel_order
-   */
-
   switch (message.type) {
     case "create_order":
       const payload = message.payload as unknown as CreateOrderInput;
@@ -96,19 +87,20 @@ function handleEngineRequest(message: EngineRequest): unknown {
       return getUserBalance(userId);
 
     case "get_order":
-    // read orderId from payload
-    // find and return the order
+      // read orderId from payload
+      // find and return the order
 
-    const { orderId } = message.payload as { orderId: string }
-    return getOrder(orderId)
+      const { orderId } = message.payload as { orderId: string };
+      return getOrder(orderId);
 
     case "cancel_order":
-    // read orderId from payload
-    // remove from order book, return confirmation
+      // read orderId from payload
+      // remove from order book, return confirmation
 
-    const payload = message.payload as unknown as CancelOrder
-    return cancelOrder(payload)
-
+      const payload2 = message.payload as unknown as CancelOrder;
+      return cancelOrder(payload2);
+    default:
+      throw new Error("Unknown command type");
   }
 }
 
