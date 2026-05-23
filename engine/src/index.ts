@@ -1,6 +1,8 @@
 import "dotenv/config";
 import { createClient } from "redis";
 import { env } from "./utils/env.js";
+import type { CreateOrderInput, CancelOrder } from "./store/exchange-store.js";
+import { createOrder } from "./orderbook.js";
 
 export type EngineCommandType =
   | "create_order"
@@ -23,13 +25,19 @@ export interface EngineResponse {
   error?: string;
 }
 
-const brokerClient = createClient({ url: env.redisUrl }).on("error", (error) => {
-  console.error("Redis broker client error", error);
-});
+const brokerClient = createClient({ url: env.redisUrl }).on(
+  "error",
+  (error) => {
+    console.error("Redis broker client error", error);
+  },
+);
 
-const responseClient = createClient({ url: env.redisUrl }).on("error", (error) => {
-  console.error("Redis response client error", error);
-});
+const responseClient = createClient({ url: env.redisUrl }).on(
+  "error",
+  (error) => {
+    console.error("Redis response client error", error);
+  },
+);
 
 await Promise.all([brokerClient.connect(), responseClient.connect()]);
 
@@ -46,7 +54,10 @@ const DUMMY_SELL_ORDER = {
   status: "open",
 };
 
-async function sendResponse(responseQueue: string, response: EngineResponse): Promise<void> {
+async function sendResponse(
+  responseQueue: string,
+  response: EngineResponse,
+): Promise<void> {
   await responseClient.lPush(responseQueue, JSON.stringify(response));
 }
 
@@ -66,28 +77,74 @@ function handleEngineRequest(message: EngineRequest): unknown {
    * - cancel_order
    */
 
-  // just checking the flow, remove this when you start implementing the logic
-  if (message.type === "create_order") {
-    return {
-      orderId: crypto.randomUUID(),
-      status: "filled",
-      filledQty: DUMMY_SELL_ORDER.qty,
-      averagePrice: DUMMY_SELL_ORDER.price,
-      fills: [
-        {
-          fillId: crypto.randomUUID(),
-          symbol: DUMMY_SELL_ORDER.symbol,
-          price: DUMMY_SELL_ORDER.price,
-          qty: DUMMY_SELL_ORDER.qty,
-          buyOrderId: "request-buy-order",
-          sellOrderId: DUMMY_SELL_ORDER.orderId,
-        },
-      ],
-      note: "Smoke-test response only. Students must replace this with real matching logic.",
-    };
+  switch (message.type) {
+    case "create_order":
+      const payload = message.payload as unknown as CreateOrderInput;
+      
+      const { userId, type, side, symbol, price, qty } = payload;
+
+      if (type === "market" && price !== null) {
+        throw new Error("Market orders should not have a price");
+      }
+
+      if (type === "limit" && (price === null || price <= 0)) {
+        throw new Error("Limit orders must have a valid price");
+      }
+
+      if (qty <= 0) {
+        throw new Error("Quantity must be greater than zero");
+      }
+
+      if (!["buy", "sell"].includes(side)) {
+        throw new Error("Side must be 'buy' or 'sell'");
+      }
+
+      if (typeof symbol !== "string" || symbol.trim() === "") {
+        throw new Error("Symbol must be a non-empty string");
+      }
+
+      return createOrder(payload);
+
+
+    case "get_depth":
+    // read symbol from payload
+    // return bids[] and asks[] from the order book
+
+    case "get_user_balance":
+    // read userId from payload
+    // return their balance
+
+    case "get_order":
+    // read orderId from payload
+    // find and return the order
+
+    case "cancel_order":
+    // read orderId from payload
+    // remove from order book, return confirmation
   }
 
-  throw new Error("TODO(student): implement this engine request type");
+  // just checking the flow, remove this when you start implementing the logic
+  //   if (message.type === "create_order") {
+  //     return {
+  //       orderId: crypto.randomUUID(),
+  //       status: "filled",
+  //       filledQty: DUMMY_SELL_ORDER.qty,
+  //       averagePrice: DUMMY_SELL_ORDER.price,
+  //       fills: [
+  //         {
+  //           fillId: crypto.randomUUID(),
+  //           symbol: DUMMY_SELL_ORDER.symbol,
+  //           price: DUMMY_SELL_ORDER.price,
+  //           qty: DUMMY_SELL_ORDER.qty,
+  //           buyOrderId: "request-buy-order",
+  //           sellOrderId: DUMMY_SELL_ORDER.orderId,
+  //         },
+  //       ],
+  //       note: "Smoke-test response only. Students must replace this with real matching logic.",
+  //     };
+  //   }
+
+  //   throw new Error("TODO(student): implement this engine request type");
 }
 
 console.log(`Engine listening on Redis queue: ${env.incomingQueue}`);
