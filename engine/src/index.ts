@@ -2,7 +2,7 @@ import "dotenv/config";
 import { createClient } from "redis";
 import { env } from "./utils/env.js";
 import type { CreateOrderInput, CancelOrder } from "./store/exchange-store.js";
-import { createOrder } from "./orderbook.js";
+import { createOrder, getDepth } from "./orderbook.js";
 
 export type EngineCommandType =
   | "create_order"
@@ -80,28 +80,6 @@ function handleEngineRequest(message: EngineRequest): unknown {
   switch (message.type) {
     case "create_order":
       const payload = message.payload as unknown as CreateOrderInput;
-      
-      const { userId, type, side, symbol, price, qty } = payload;
-
-      if (type === "market" && price !== null) {
-        throw new Error("Market orders should not have a price");
-      }
-
-      if (type === "limit" && (price === null || price <= 0)) {
-        throw new Error("Limit orders must have a valid price");
-      }
-
-      if (qty <= 0) {
-        throw new Error("Quantity must be greater than zero");
-      }
-
-      if (!["buy", "sell"].includes(side)) {
-        throw new Error("Side must be 'buy' or 'sell'");
-      }
-
-      if (typeof symbol !== "string" || symbol.trim() === "") {
-        throw new Error("Symbol must be a non-empty string");
-      }
 
       return createOrder(payload);
 
@@ -109,6 +87,8 @@ function handleEngineRequest(message: EngineRequest): unknown {
     case "get_depth":
     // read symbol from payload
     // return bids[] and asks[] from the order book
+    const { symbol } = message.payload.symbol as {symbol: string};
+    return getDepth(symbol);
 
     case "get_user_balance":
     // read userId from payload

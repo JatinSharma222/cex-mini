@@ -1,12 +1,13 @@
-import type {
-  Balance,
-  CancelOrder,
-  CreateOrderInput,
-  OrderRecord,
-  OrderStatus,
-  RestingOrder,
-  Fill,
-  DepthResponse,
+import {
+  type Balance,
+  type CancelOrder,
+  type CreateOrderInput,
+  type OrderRecord,
+  type OrderStatus,
+  type RestingOrder,
+  type Fill,
+  type DepthResponse,
+  ORDERBOOKS,
 } from "./store/exchange-store";
 
 export function createOrder(input: CreateOrderInput) {
@@ -139,5 +140,36 @@ export function createOrder(input: CreateOrderInput) {
     averagePrice: price ?? 0,
     filled: qty - remainingQty,
     remaining: remainingQty,
+  };
+}
+
+export function getDepth(symbol: string): DepthResponse {
+  const book = ORDERBOOKS[symbol];
+  if (!book) {
+    return {
+      symbol: symbol,
+      bids: [],
+      asks: [],
+    };
+  }
+
+  const aggregate = (orders: RestingOrder[]) => {
+    const counts: Record<number, number> = {};
+    orders.forEach((order) => {
+      counts[order.price] = (counts[order.price] || 0) + order.qty;
+    });
+    return Object.entries(counts).map(([price, qty]) => ({
+      price: Number(price),
+      qty,
+    }));
+  };
+
+  const bids = aggregate(book.bids).sort((a, b) => b.price - a.price);
+  const asks = aggregate(book.asks).sort((a, b) => a.price - b.price);
+
+  return {
+    symbol,
+    bids,
+    asks,
   };
 }
