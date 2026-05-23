@@ -8,6 +8,7 @@ import {
   type Fill,
   type DepthResponse,
   ORDERBOOKS,
+  BALANCES,
 } from "./store/exchange-store";
 
 export function createOrder(input: CreateOrderInput) {
@@ -172,4 +173,8 @@ export function getDepth(symbol: string): DepthResponse {
     bids,
     asks,
   };
+}
+
+export function getUserBalance(userId: string): Record<string, Balance> {
+  return BALANCES[userId] || {};
 }

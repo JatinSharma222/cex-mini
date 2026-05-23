@@ -2,7 +2,7 @@ import "dotenv/config";
 import { createClient } from "redis";
 import { env } from "./utils/env.js";
 import type { CreateOrderInput, CancelOrder } from "./store/exchange-store.js";
-import { createOrder, getDepth } from "./orderbook.js";
+import { createOrder, getDepth, getUserBalance } from "./orderbook.js";
 
 export type EngineCommandType =
   | "create_order"
@@ -83,16 +83,17 @@ function handleEngineRequest(message: EngineRequest): unknown {
 
       return createOrder(payload);
 
-
     case "get_depth":
-    // read symbol from payload
-    // return bids[] and asks[] from the order book
-    const { symbol } = message.payload.symbol as {symbol: string};
-    return getDepth(symbol);
+      // read symbol from payload
+      // return bids[] and asks[] from the order book
+      const { symbol } = message.payload.symbol as { symbol: string };
+      return getDepth(symbol);
 
     case "get_user_balance":
-    // read userId from payload
-    // return their balance
+      // read userId from payload
+      // return their balance
+      const { userId } = message.payload as { userId: string };
+      return getUserBalance(userId);
 
     case "get_order":
     // read orderId from payload
